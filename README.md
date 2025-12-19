@@ -79,7 +79,7 @@ Panels:
 - Tracker: truth vs estimate (2D) with zoom; axis labels in meters
 - Performance Metrics window: RMSE/NEES/Residual histories per filter
 
-> Figure placeholder: add a screenshot of the Visualizer layout (Controls, Magnetic maps, Trajectory, Tracker, Performance windows).
+<img width="1919" height="1029" alt="image" src="https://github.com/user-attachments/assets/1e5672d3-1680-463b-a70e-9d147216daf9" />
 
 ## Configuration
 
