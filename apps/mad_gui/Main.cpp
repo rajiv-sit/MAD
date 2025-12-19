@@ -98,6 +98,7 @@ struct AppState_t {
   bool showRmseGraph = true;
   bool showNeesGraph = true;
   bool showResidualGraph = true;
+  float trackerZoom = 1.0f;
 };
 
 std::vector<std::string> availableFilterTypes() {
@@ -383,6 +384,20 @@ void applyLoggingConfig(AppState_t& appState, const nlohmann::json& config) {
   const nlohmann::json loggingNode = config.value("logging", nlohmann::json::object());
   appState.logEnabled = loggingNode.value("enabled", true);
   appState.logLevel = loggingNode.value("level", "info");
+  const auto fileNode = loggingNode.value("file", nlohmann::json::object());
+  mad::FileSinkConfig_t fileConfig;
+  fileConfig.enabled = fileNode.value("enabled", true);
+  fileConfig.path = fileNode.value("path", "logs/mad.log");
+  fileConfig.maxSizeBytes = fileNode.value("maxSizeBytes", static_cast<std::size_t>(5 * 1024 * 1024));
+  fileConfig.maxFiles = fileNode.value("maxFiles", static_cast<std::size_t>(3));
+  mad::Logger::ConfigureFileSink(fileConfig);
+  const auto classNode = loggingNode.value("classLogs", nlohmann::json::object());
+  mad::ClassSinkConfig_t classConfig;
+  classConfig.enabled = classNode.value("enabled", true);
+  classConfig.directory = classNode.value("directory", "logs/classes");
+  classConfig.maxSizeBytes = classNode.value("maxSizeBytes", static_cast<std::size_t>(5 * 1024 * 1024));
+  classConfig.maxFiles = classNode.value("maxFiles", static_cast<std::size_t>(3));
+  mad::Logger::ConfigureClassSink(classConfig);
   mad::Logger::SetEnabled(appState.logEnabled);
   mad::Logger::SetLevel(mad::Logger::ParseLevel(appState.logLevel));
 }
@@ -481,10 +496,10 @@ int main() {
   appState.alertAllFilters = alertNode.value("scope", "map") == "all";
   appState.alertBaselineTesla = earthField.norm();
   appState.alertSoundPath = resolveDataPath(configDir, alertNode.value("soundPath", "sound/button-11.wav"));
+  const std::string defaultFilter = config.value("filter", nlohmann::json::object()).value("type", "ekf");
   for (const auto& type : availableFilterTypes()) {
-    appState.selectedFilters[type] = false;
+    appState.selectedFilters[type] = (type == defaultFilter);
   }
-  appState.selectedFilters["ekf"] = true;
   viz.setTruthBaseline(static_cast<float>(earthField.norm()));
   viz.setEarthField(earthField);
   resetAppState(appState, config, configDir);
@@ -675,6 +690,10 @@ int main() {
     ImGui::SameLine();
     ImGui::Checkbox("3D", &showTrajectory3d);
     viz.setTrajectoryOptions(showTrajectory2d, showTrajectory3d);
+    ImGui::Separator();
+    ImGui::Text("Tracker Zoom");
+    ImGui::SliderFloat("Zoom##tracker", &appState.trackerZoom, 0.5f, 5.0f, "%.2f");
+    viz.setTrackerZoom(appState.trackerZoom);
     ImGui::End();
 
     if (selectionChanged) {

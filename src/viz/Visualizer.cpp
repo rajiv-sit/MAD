@@ -5,11 +5,20 @@
 #include <cstdio>
 
 #include <imgui.h>
+#include "mad/core/Logger.hpp"
 
 namespace mad {
 
-void Visualizer::start() {}
-void Visualizer::stop() {}
+void Visualizer::start() {
+  if (auto logger = Logger::GetClass("Visualizer")) {
+    logger->info("Visualizer started");
+  }
+}
+void Visualizer::stop() {
+  if (auto logger = Logger::GetClass("Visualizer")) {
+    logger->info("Visualizer stopped");
+  }
+}
 
 void Visualizer::setFilterNames(const std::vector<std::string>& filterNames) {
   state.filterEntries.clear();
@@ -50,6 +59,9 @@ void Visualizer::setTrajectoryOptions(bool show2d, bool show3d) {
   state.showTrajectory3d = show3d;
 }
 
+void Visualizer::setTrackerZoom(float zoom) {
+  state.trackerZoom = zoom;
+}
 namespace {
 
 ImU32 colorRamp(float t) {
@@ -355,7 +367,8 @@ void drawTrajectory3d(const char* label,
 }
 
 void drawTrackerPanel(const std::vector<TrackPoint_t>& truthTrack,
-                      const std::vector<TrackPoint_t>& estimatedTrack) {
+                      const std::vector<TrackPoint_t>& estimatedTrack,
+                      float zoom) {
   float width = ImGui::GetContentRegionAvail().x;
   if (width < 10.0f) {
     width = 300.0f;
@@ -402,9 +415,18 @@ void drawTrackerPanel(const std::vector<TrackPoint_t>& truthTrack,
     return;
   }
 
+  const float cx = 0.5f * (minX + maxX);
+  const float cy = 0.5f * (minY + maxY);
+  const float halfDx = 0.5f * dx / std::max(zoom, 0.1f);
+  const float halfDy = 0.5f * dy / std::max(zoom, 0.1f);
+  const float adjMinX = cx - halfDx;
+  const float adjMaxX = cx + halfDx;
+  const float adjMinY = cy - halfDy;
+  const float adjMaxY = cy + halfDy;
+
   auto toScreen = [&](const TrackPoint_t& p) {
-    const float nx = (p.x - minX) / dx;
-    const float ny = (p.y - minY) / dy;
+    const float nx = (p.x - adjMinX) / (adjMaxX - adjMinX);
+    const float ny = (p.y - adjMinY) / (adjMaxY - adjMinY);
     const float px = cursor.x + nx * size.x;
     const float py = cursor.y + (1.0f - ny) * size.y;
     return ImVec2(px, py);
@@ -416,6 +438,8 @@ void drawTrackerPanel(const std::vector<TrackPoint_t>& truthTrack,
   for (size_t i = 1; i < estimatedTrack.size(); ++i) {
     drawList->AddLine(toScreen(estimatedTrack[i - 1]), toScreen(estimatedTrack[i]), IM_COL32(240, 200, 80, 220), 2.0f);
   }
+  drawList->AddText(ImVec2(cursor.x + 6.0f, max.y - 18.0f), IM_COL32(200, 200, 200, 255), "X (m)");
+  drawList->AddText(ImVec2(cursor.x + 6.0f, cursor.y + 6.0f), IM_COL32(200, 200, 200, 255), "Y (m)");
 }
 
 } // namespace
@@ -604,10 +628,10 @@ void Visualizer::render() {
   ImGui::TextColored(ImVec4(0.94f, 0.78f, 0.31f, 1.0f), "Estimated");
   const auto trackIt = state.estimatedTracks.find(state.trackerFilterName);
   if (trackIt != state.estimatedTracks.end()) {
-    drawTrackerPanel(state.targetTrack, trackIt->second);
+    drawTrackerPanel(state.targetTrack, trackIt->second, state.trackerZoom);
   } else {
     std::vector<TrackPoint_t> empty;
-    drawTrackerPanel(state.targetTrack, empty);
+    drawTrackerPanel(state.targetTrack, empty, state.trackerZoom);
   }
   ImGui::End();
 

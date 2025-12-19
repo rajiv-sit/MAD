@@ -6,13 +6,13 @@
   },
   "model": {
     "earthField": [2.5e-5, -3.4e-6, 3.6e-5],
-    "processNoiseVar": 0.05,
+    "processNoiseVar": 0.02,
     "measurementNoiseVar": 1.0e-18,
-    "measurementScale": 0.0,
+    "measurementScale": 1.0,
     "observationModel": "dipole"
   },
   "filter": {
-    "type": "ekf",
+    "type": "ukf",
     "params": {
       "numParticles": 500,
       "stateDimension": 10,
@@ -28,13 +28,25 @@
   },
   "logging": {
     "enabled": true,
-    "level": "debug"
+    "level": "debug",
+    "file": {
+      "enabled": true,
+      "path": "logs/mad.log",
+      "maxSizeBytes": 5242880,
+      "maxFiles": 3
+    },
+    "classLogs": {
+      "enabled": true,
+      "directory": "logs/classes",
+      "maxSizeBytes": 5242880,
+      "maxFiles": 3
+    }
   },
   "viz": {
     "enabled": true,
     "alert": {
       "enabled": true,
-      "thresholdTesla": 0.0,
+      "thresholdTesla": 5e-9,
       "cooldownMs": 800,
       "soundPath": "sound/button-11.wav",
       "scope": "map"

@@ -59,7 +59,7 @@ void UKF::predict(double dt) {
   state = predictedMean;
   covariance = predictedCov;
   if ((stepCount % 50) == 0) {
-    if (auto logger = Logger::Get()) {
+    if (auto logger = Logger::GetClass("UKF")) {
       logger->debug("UKF predict step {} dt {:.6f} state x {:.3f} y {:.3f}", stepCount, dt, state(0), state(2));
     }
   }
@@ -117,7 +117,7 @@ FilterOutput_t UKF::update(const FilterInput_t& input) {
   covariance = covariance - K * S * K.transpose();
 
   if ((updateCount % 50) == 0) {
-    if (auto logger = Logger::Get()) {
+    if (auto logger = Logger::GetClass("UKF")) {
       logger->debug("UKF update step {} z {:.3e} y {:.3e} res {:.3e} |K| {:.3e} x {:.3f} y {:.3f}",
                     updateCount,
                     zMeas,

@@ -57,24 +57,29 @@ Mad is a cross-platform C++ framework that reimplements the MATLAB MAD prototype
 
 ## Visualizer & Controls
 
-Open `BuildDebug.bat` or start `mad_gui.exe` from the build folder and watch:
+Run from `MAD\build_debug`:
+```
+conanrun.bat
+Debug\mad_gui.exe
+```
 
-- **Controls window**:
-  - Run/Pause/Step/Reset buttons drive the pipeline.
-  - **Unlimited Scans** toggle & **Max Scans slider** (1–10 000) bound `dataset.maxScans` so you can replay only part of the flight.
-  - Filter toggles let you enable multiple filters simultaneously for direct comparison. The default selection is `ekf`; the map & tracker combo boxes choose which filter provides map/panel data.
-  - Performance panel switches (`Performance Panel`, `Show RMSE`, `NEES`, `Residual`) mirror the independent metrics window and can be turned off separately.
-  - Logging controls (`Enabled`, log level dropdown) manipulate `spdlog` through `mad::Logger`.
+Controls:
+- Run/Pause/Step/Reset
+- Filter toggles; map/tracker dropdowns select which filter feeds each panel
+- Max Scans slider + Unlimited toggle (binds `dataset.maxScans`)
+- Performance panel toggles (RMSE/NEES/Residual graphs)
+- Logging enable + level; logs go to `logs/mad.log` and per-class logs under `logs/classes`
+- Tracker Zoom slider to zoom the tracker panel (X/Y in meters)
+- Alert settings (threshold/cooldown/scope) driven by `viz.alert`
 
-- **Main visualizer**:
-  - Measurement summary (time, magnetic value, sensor position) feeds the magnetic map and history plots.
-  - State table shows all 10 estimated states per filter alongside residuals, RMSE, NEES, runtime, and ESS.
-  - Magnetic map layer panel draws measured, predicted, and residual heatmaps as well as the uniform truth baseline (combines `Bn/Be/Bv` display for orientation).
-  - Trajectory window (2D/3D toggle) renders sensor/ship truth in both planar and pseudo-3D views.
-  - Tracker window always starts with the visualizer and plots truth vs estimate in 2D; if you change the tracker filter, the lines update live.
-  - Performance Metrics (standalone window) is independent of the tracker panel and plots RMSE, NEES, and residual time series per filter via the `Visualizer` history buffers.
+Panels:
+- Measurement summary; state table (10D); magnetic table (measured/predicted/ESS)
+- Magnetic maps: measured, predicted, residual, uniform truth baseline (`|B|`)
+- Trajectories 2D/3D
+- Tracker: truth vs estimate (2D) with zoom; axis labels in meters
+- Performance Metrics window: RMSE/NEES/Residual histories per filter
 
-- **Alert**: When any selected filter deviates from the Earth field baseline by more than `viz.alert.thresholdTesla` (default 5 nT) the app plays `sound/button-11.wav`, with the alert scope and cooldown configured in `config/default.json`.
+> Figure placeholder: add a screenshot of the Visualizer layout (Controls, Magnetic maps, Trajectory, Tracker, Performance windows).
 
 ## Configuration
 
@@ -120,7 +125,7 @@ Open `BuildDebug.bat` or start `mad_gui.exe` from the build folder and watch:
 ```
 
 - `filter.params` controls the particle filters (resample policy, ESS threshold, mixture components, etc.).
-- `model.measurementScale` = 0 auto-scales from the very first truth sample (same logic the MATLAB bootstrap used).
+- `model.measurementScale` = 1.0 by default. Set to 0 to auto-scale from the first truth sample (same logic the MATLAB bootstrap used).
 - `viz.alert` governs the audible warning when the magnetic anomaly leaves the constant Earth field `truth` area.
 - `config/imgui.ini` stores ImGui window positions; it is now tracked so team members share the same layout. Remove it to reset.
 

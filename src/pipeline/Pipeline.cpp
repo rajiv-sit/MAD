@@ -11,7 +11,11 @@ Pipeline::Pipeline(std::shared_ptr<IDataSource> dataSource,
     : dataSource(std::move(dataSource)),
       filter(std::move(filter)),
       tracker(std::move(tracker)),
-      maxScans(maxScansInput) {}
+      maxScans(maxScansInput) {
+  if (auto logger = Logger::GetClass("Pipeline")) {
+    logger->info("Pipeline created maxScans {}", maxScans == 0 ? -1 : static_cast<int>(maxScans));
+  }
+}
 
 void Pipeline::run() {
   Measurement_t measurement;
@@ -20,9 +24,9 @@ void Pipeline::run() {
   std::size_t stepCount = 0;
   while (dataSource && dataSource->next(measurement)) {
     if (maxScans > 0 && stepCount >= maxScans) {
-      if (auto logger = Logger::Get()) {
-        logger->info("Pipeline: reached max scans {}", maxScans);
-      }
+    if (auto logger = Logger::GetClass("Pipeline")) {
+      logger->info("Pipeline: reached max scans {}", maxScans);
+    }
       break;
     }
     double dt = 0.0;
@@ -43,13 +47,16 @@ void Pipeline::run() {
         tracker->step(trackState, measurement.time);
       }
     }
-    if (auto logger = Logger::Get()) {
+    if (auto logger = Logger::GetClass("Pipeline")) {
       if ((stepCount % 200) == 0) {
         logger->debug("Pipeline step {} time {:.3f} dt {:.6f}", stepCount, measurement.time, dt);
       }
     }
     lastTime = measurement.time;
     ++stepCount;
+  }
+  if (auto logger = Logger::GetClass("Pipeline")) {
+    logger->info("Pipeline completed after {} scans", stepCount);
   }
 }
 

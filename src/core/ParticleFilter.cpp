@@ -98,6 +98,13 @@ ParticleFilterBase::ParticleFilterBase(std::shared_ptr<StateSpaceModel> model, P
     }
     p.weight = 1.0 / n;
   }
+  if (auto logger = Logger::GetClass("ParticleFilter")) {
+    logger->info("ParticleFilterBase: particles {} resample {} ess {:.2f} dim {}",
+                 options.numParticles,
+                 static_cast<int>(options.resamplePolicy),
+                 options.essThresholdRatio,
+                 initialState.size());
+  }
 }
 
 void ParticleFilterBase::predict(double dt) {
@@ -140,6 +147,11 @@ FilterOutput_t ParticleFilterBase::update(const FilterInput_t& input) {
                              (options.resamplePolicy == ResamplePolicy_e::kAdaptive &&
                               effectiveSampleSizeInternal() < options.essThresholdRatio * particles.size());
   if (needsResample) {
+    if (auto logger = Logger::GetClass("ParticleFilter")) {
+      logger->debug("PF resample triggered at ESS {:.1f} thresh {:.1f}",
+                    effectiveSampleSizeInternal(),
+                    options.essThresholdRatio * particles.size());
+    }
     resample();
     afterResample();
   }

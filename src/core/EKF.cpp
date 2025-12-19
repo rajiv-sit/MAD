@@ -24,7 +24,7 @@ void EKF::predict(double dt) {
   processNoise = model->processNoise(dt);
   covariance = F * covariance * F.transpose() + processNoise;
   if ((stepCount % 50) == 0) {
-    if (auto logger = Logger::Get()) {
+    if (auto logger = Logger::GetClass("EKF")) {
       logger->debug("EKF predict step {} dt {:.6f} state x {:.3f} y {:.3f}", stepCount, dt, state(0), state(2));
     }
   }
@@ -55,7 +55,7 @@ FilterOutput_t EKF::update(const FilterInput_t& input) {
   covariance = (I - K * H) * covariance;
 
   if ((updateCount % 50) == 0) {
-    if (auto logger = Logger::Get()) {
+    if (auto logger = Logger::GetClass("EKF")) {
       const double hNorm = H.norm();
       const double kNorm = K.norm();
       logger->debug("EKF update step {} z {:.3e} y {:.3e} res {:.3e} |H| {:.3e} |K| {:.3e} x {:.3f} y {:.3f}",

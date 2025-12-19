@@ -53,6 +53,7 @@ struct VisualizerState_t {
   bool showTruthMap = true;
   bool showTrajectory2d = true;
   bool showTrajectory3d = false;
+  float trackerZoom = 1.0f;
   std::vector<TrackPoint_t> sensorTrack;
   std::vector<TrackPoint_t> targetTrack;
   std::unordered_map<std::string, std::vector<TrackPoint_t>> estimatedTracks;
@@ -84,6 +85,7 @@ public:
   void setEarthField(const Vector& earthFieldTesla);
   void setMapOptions(bool showMeasured, bool showPredicted, bool showResidual, bool showTruth);
   void setTrajectoryOptions(bool show2d, bool show3d);
+  void setTrackerZoom(float zoom);
   void setPerformancePanelEnabled(bool enabled);
   void setShowRmseGraph(bool show);
   void setShowNeesGraph(bool show);

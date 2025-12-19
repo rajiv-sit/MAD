@@ -76,6 +76,20 @@ void applyLoggingConfig(const nlohmann::json& config) {
   const nlohmann::json loggingNode = config.value("logging", nlohmann::json::object());
   const bool enabled = loggingNode.value("enabled", true);
   const std::string level = loggingNode.value("level", "info");
+  const auto fileNode = loggingNode.value("file", nlohmann::json::object());
+  mad::FileSinkConfig_t fileConfig;
+  fileConfig.enabled = fileNode.value("enabled", true);
+  fileConfig.path = fileNode.value("path", "logs/mad.log");
+  fileConfig.maxSizeBytes = fileNode.value("maxSizeBytes", static_cast<std::size_t>(5 * 1024 * 1024));
+  fileConfig.maxFiles = fileNode.value("maxFiles", static_cast<std::size_t>(3));
+  mad::Logger::ConfigureFileSink(fileConfig);
+  const auto classNode = loggingNode.value("classLogs", nlohmann::json::object());
+  mad::ClassSinkConfig_t classConfig;
+  classConfig.enabled = classNode.value("enabled", true);
+  classConfig.directory = classNode.value("directory", "logs/classes");
+  classConfig.maxSizeBytes = classNode.value("maxSizeBytes", static_cast<std::size_t>(5 * 1024 * 1024));
+  classConfig.maxFiles = classNode.value("maxFiles", static_cast<std::size_t>(3));
+  mad::Logger::ConfigureClassSink(classConfig);
   mad::Logger::SetEnabled(enabled);
   mad::Logger::SetLevel(mad::Logger::ParseLevel(level));
 }

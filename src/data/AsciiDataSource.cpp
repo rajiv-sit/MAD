@@ -54,7 +54,11 @@ Eigen::Vector3d ecefToEnu(const Eigen::Vector3d& ecef,
 
 } // namespace
 
-AsciiDataSource::AsciiDataSource(const std::string& path) : fileStream(path) {}
+AsciiDataSource::AsciiDataSource(const std::string& path) : fileStream(path) {
+  if (auto logger = Logger::GetClass("AsciiDataSource")) {
+    logger->info("AsciiDataSource opening {}", path);
+  }
+}
 
 bool AsciiDataSource::good() const {
   return fileStream.good();
