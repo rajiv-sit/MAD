@@ -1,0 +1,30 @@
+{
+  "dataset": {
+    "path": "data/raw/mad_data.asc",
+    "format": "ascii"
+  },
+  "model": {
+    "earthField": [2.5e-5, -3.4e-6, 3.6e-5],
+    "processNoiseVar": 0.05,
+    "measurementNoiseVar": 1.0e-18,
+    "observationModel": "dipole"
+  },
+  "filter": {
+    "type": "ukf",
+    "params": {
+      "numParticles": 500,
+      "stateDimension": 10,
+      "resamplePolicy": "adaptive",
+      "essThresholdRatio": 0.5
+    }
+  },
+  "tracker": {
+    "enabled": true,
+    "params": {
+      "maxTracks": 10
+    }
+  },
+  "viz": {
+    "enabled": true
+  }
+}

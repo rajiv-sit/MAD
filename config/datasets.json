@@ -1,0 +1,10 @@
+{
+  "datasets": [
+    {
+      "name": "mad_data",
+      "path": "data/raw/mad_data.asc",
+      "format": "ascii",
+      "samplingHz": 32
+    }
+  ]
+}

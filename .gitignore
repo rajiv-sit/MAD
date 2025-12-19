@@ -1,0 +1,54 @@
+# Build outputs
+MAD/build_debug/
+MAD/build_release/
+MAD/build*/
+
+# CMake/Conan generated
+MAD/CMakeUserPresets.json
+MAD/**/CMakeFiles/
+MAD/**/CMakeCache.txt
+MAD/**/cmake_install.cmake
+MAD/**/Makefile
+MAD/**/conan_toolchain.cmake
+MAD/**/conanbuild.bat
+MAD/**/conanrun.bat
+MAD/**/CMakePresets.json
+
+# Visual Studio
+MAD/.vs/
+MAD/*.sln
+MAD/*.vcxproj*
+MAD/*.vcxproj.user
+MAD/*.vcxproj.filters
+MAD/*.vcxproj
+MAD/*.vcxproj.*
+MAD/*.suo
+MAD/*.user
+MAD/*.vcxproj.user
+MAD/*.vcxproj.filters
+MAD/*.vcxproj
+MAD/*.vcxproj.*
+MAD/*.suo
+MAD/*.user
+
+# Binaries
+MAD/**/Debug/
+MAD/**/Release/
+MAD/**/*.exe
+MAD/**/*.pdb
+MAD/**/*.ilk
+MAD/**/*.obj
+MAD/**/*.lib
+MAD/**/*.exp
+
+# Test artifacts
+MAD/**/Testing/
+MAD/**/coverage.xml
+
+# Conan
+MAD/**/conaninfo.txt
+MAD/**/conanbuildinfo.cmake
+
+# OS
+.DS_Store
+Thumbs.db
