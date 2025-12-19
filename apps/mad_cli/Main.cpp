@@ -7,6 +7,7 @@
 #include <nlohmann/json.hpp>
 
 #include "mad/core/FilterFactory.hpp"
+#include "mad/core/Logger.hpp"
 #include "mad/core/MadModel.hpp"
 #include "mad/data/AsciiDataSource.hpp"
 #include "mad/pipeline/Pipeline.hpp"
@@ -71,27 +72,34 @@ nlohmann::json loadJson(const std::string& path) {
   return config;
 }
 
+void applyLoggingConfig(const nlohmann::json& config) {
+  const nlohmann::json loggingNode = config.value("logging", nlohmann::json::object());
+  const bool enabled = loggingNode.value("enabled", true);
+  const std::string level = loggingNode.value("level", "info");
+  mad::Logger::SetEnabled(enabled);
+  mad::Logger::SetLevel(mad::Logger::ParseLevel(level));
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
+  mad::Logger::Initialize();
   const CliOptions_t cliOptions = parseArgs(argc, argv);
   if (cliOptions.showHelp) {
     fmt::print("Usage: mad_cli [--config <path>] [--dataset <path>] [--filter <type>] [--obs-model <dipole|body>]\n");
     return 0;
   }
-  fmt::print("mad_cli using config: {}\n", cliOptions.configPath);
 
   nlohmann::json config = loadJson(cliOptions.configPath);
+  applyLoggingConfig(config);
+  if (auto logger = mad::Logger::Get()) {
+    logger->info("mad_cli using config: {}", cliOptions.configPath);
+  }
   const nlohmann::json datasetNode = config.value("dataset", nlohmann::json::object());
   std::string datasetPath = datasetNode.value("path", "data/raw/mad_data.asc");
+  const std::size_t maxScans = datasetNode.value("maxScans", 0);
   if (!cliOptions.datasetPath.empty()) {
     datasetPath = cliOptions.datasetPath;
-  }
-
-  auto dataSource = std::make_shared<mad::AsciiDataSource>(datasetPath);
-  if (!dataSource->good()) {
-    fmt::print("Failed to open data source.\n");
-    return 1;
   }
 
   const nlohmann::json modelNode = config.value("model", nlohmann::json::object());
@@ -106,10 +114,42 @@ int main(int argc, char** argv) {
     observationModel = cliOptions.observationModel;
   }
 
+  double measurementScale = modelNode.value("measurementScale", 1.0);
+
   auto model = std::make_shared<mad::MadModel>(earthField,
                                                processNoiseVar,
                                                measurementNoiseVar,
-                                               parseObservationModel(observationModel));
+                                               parseObservationModel(observationModel),
+                                               measurementScale);
+  if (measurementScale <= 0.0) {
+    auto probeSource = std::make_shared<mad::AsciiDataSource>(datasetPath);
+    mad::Measurement_t first;
+    if (probeSource && probeSource->next(first) && first.hasTruth) {
+      model->setMeasurementContext(first);
+      model->setMeasurementScale(1.0);
+      const mad::Vector truthPred = model->predictMeasurement(first.truthState);
+      if (truthPred.size() > 0 && std::abs(truthPred(0)) > 0.0) {
+        measurementScale = first.magneticTfc / truthPred(0);
+        model->setMeasurementScale(measurementScale);
+        if (auto logger = mad::Logger::Get()) {
+          logger->info("Auto measurementScale set to {:.3e}", measurementScale);
+        }
+      }
+    }
+  }
+
+  auto dataSource = std::make_shared<mad::AsciiDataSource>(datasetPath);
+  if (!dataSource->good()) {
+    if (auto logger = mad::Logger::Get()) {
+      logger->error("Failed to open data source: {}", datasetPath);
+    } else {
+      fmt::print("Failed to open data source.\n");
+    }
+    return 1;
+  }
+  if (auto logger = mad::Logger::Get()) {
+    logger->info("Dataset: {}", datasetPath);
+  }
 
   nlohmann::json filterNode = config.value("filter", nlohmann::json::object());
   if (!cliOptions.filterType.empty()) {
@@ -117,14 +157,22 @@ int main(int argc, char** argv) {
   }
   auto filter = mad::createFilter(filterNode, model);
   if (!filter) {
-    fmt::print("Failed to create filter from config.\n");
+    if (auto logger = mad::Logger::Get()) {
+      logger->error("Failed to create filter from config.");
+    } else {
+      fmt::print("Failed to create filter from config.\n");
+    }
     return 1;
   }
 
   auto tracker = std::make_shared<mad::NoopTracker>();
-  mad::Pipeline pipeline(dataSource, filter, tracker);
+  mad::Pipeline pipeline(dataSource, filter, tracker, maxScans);
   pipeline.run();
 
-  fmt::print("mad_cli done\n");
+  if (auto logger = mad::Logger::Get()) {
+    logger->info("mad_cli done");
+  } else {
+    fmt::print("mad_cli done\n");
+  }
   return 0;
 }

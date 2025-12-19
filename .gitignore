@@ -4,7 +4,6 @@ MAD/build_release/
 MAD/build*/
 
 # CMake/Conan generated
-MAD/CMakeUserPresets.json
 MAD/**/CMakeFiles/
 MAD/**/CMakeCache.txt
 MAD/**/cmake_install.cmake

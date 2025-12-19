@@ -1,5 +1,7 @@
 #include "mad/core/ParticleFilter.hpp"
 
+#include "mad/core/Logger.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <numeric>
@@ -107,11 +109,22 @@ void ParticleFilterBase::predict(double dt) {
   }
 }
 
+void ParticleFilterBase::initialize(const Vector& initialState) {
+  if (particles.empty()) {
+    return;
+  }
+  for (auto& p : particles) {
+    p.state = initialState;
+    p.weight = 1.0 / particles.size();
+  }
+}
+
 FilterOutput_t ParticleFilterBase::update(const FilterInput_t& input) {
   if (!model) {
     return {};
   }
 
+  static std::size_t updateCount = 0;
   model->setMeasurementContext(input.measurement);
 
   for (auto& p : particles) {
@@ -137,6 +150,17 @@ FilterOutput_t ParticleFilterBase::update(const FilterInput_t& input) {
     mean += p.weight * p.state;
   }
   Matrix cov = sampleCovariance(particles);
+
+  if ((updateCount % 100) == 0) {
+    if (auto logger = Logger::Get()) {
+      logger->debug("PF update step {} ess {:.1f} mean x {:.3f} y {:.3f}",
+                    updateCount,
+                    effectiveSampleSizeInternal(),
+                    mean.size() > 0 ? mean(0) : 0.0,
+                    mean.size() > 2 ? mean(2) : 0.0);
+    }
+  }
+  ++updateCount;
 
   return FilterOutput_t{mean, cov};
 }

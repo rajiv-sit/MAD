@@ -1,16 +1,18 @@
 {
   "dataset": {
     "path": "data/raw/mad_data.asc",
-    "format": "ascii"
+    "format": "ascii",
+    "maxScans": 500
   },
   "model": {
     "earthField": [2.5e-5, -3.4e-6, 3.6e-5],
     "processNoiseVar": 0.05,
     "measurementNoiseVar": 1.0e-18,
+    "measurementScale": 0.0,
     "observationModel": "dipole"
   },
   "filter": {
-    "type": "ukf",
+    "type": "ekf",
     "params": {
       "numParticles": 500,
       "stateDimension": 10,
@@ -24,7 +26,18 @@
       "maxTracks": 10
     }
   },
+  "logging": {
+    "enabled": true,
+    "level": "debug"
+  },
   "viz": {
-    "enabled": true
+    "enabled": true,
+    "alert": {
+      "enabled": true,
+      "thresholdTesla": 0.0,
+      "cooldownMs": 800,
+      "soundPath": "sound/button-11.wav",
+      "scope": "map"
+    }
   }
 }

@@ -1,19 +1,36 @@
 #include "mad/pipeline/Pipeline.hpp"
 
+#include "mad/core/Logger.hpp"
+
 namespace mad {
 
 Pipeline::Pipeline(std::shared_ptr<IDataSource> dataSource,
                    std::shared_ptr<IFilter> filter,
-                   std::shared_ptr<ITracker> tracker)
+                   std::shared_ptr<ITracker> tracker,
+                   std::size_t maxScansInput)
     : dataSource(std::move(dataSource)),
       filter(std::move(filter)),
-      tracker(std::move(tracker)) {}
+      tracker(std::move(tracker)),
+      maxScans(maxScansInput) {}
 
 void Pipeline::run() {
   Measurement_t measurement;
   double lastTime = 0.0;
+  bool hasLastTime = false;
+  std::size_t stepCount = 0;
   while (dataSource && dataSource->next(measurement)) {
-    const double dt = measurement.time - lastTime;
+    if (maxScans > 0 && stepCount >= maxScans) {
+      if (auto logger = Logger::Get()) {
+        logger->info("Pipeline: reached max scans {}", maxScans);
+      }
+      break;
+    }
+    double dt = 0.0;
+    if (hasLastTime) {
+      dt = measurement.time - lastTime;
+    } else {
+      hasLastTime = true;
+    }
     if (filter) {
       filter->predict(dt);
       FilterInput_t input{measurement, dt};
@@ -26,7 +43,13 @@ void Pipeline::run() {
         tracker->step(trackState, measurement.time);
       }
     }
+    if (auto logger = Logger::Get()) {
+      if ((stepCount % 200) == 0) {
+        logger->debug("Pipeline step {} time {:.3f} dt {:.6f}", stepCount, measurement.time, dt);
+      }
+    }
     lastTime = measurement.time;
+    ++stepCount;
   }
 }
 

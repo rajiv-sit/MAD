@@ -1,6 +1,7 @@
 add_executable(mad_unit_tests
   unit/AsciiDataSourceTests.cpp
   unit/EkfUkfTests.cpp
+  unit/FilterSupportTests.cpp
   unit/FilterFactoryTests.cpp
   unit/MadModelTests.cpp
   unit/ParticleFilterTests.cpp

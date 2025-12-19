@@ -15,6 +15,31 @@ void PerformanceMetrics::update(double residual, double nis, double runtimeMs, d
   ++sampleCount;
 }
 
+void PerformanceMetrics::updateTruth(const Vector& estimate, const Matrix& covariance, const Vector& truth) {
+  if (estimate.size() < 4 || truth.size() < 4) {
+    return;
+  }
+
+  const double dx = estimate(0) - truth(0);
+  const double dy = estimate(2) - truth(2);
+  const double posErrorSq = dx * dx + dy * dy;
+  sumSqTruthPos += posErrorSq;
+  lastTruthRmseValue = std::sqrt(posErrorSq);
+
+  if (covariance.rows() == estimate.size() && covariance.cols() == estimate.size()) {
+    const Vector err = estimate - truth;
+    const double det = covariance.determinant();
+    if (std::isfinite(det) && std::abs(det) > 0.0) {
+      lastTruthNeesValue = err.transpose() * covariance.inverse() * err;
+      sumTruthNees += lastTruthNeesValue;
+    } else {
+      lastTruthNeesValue = 0.0;
+    }
+  }
+
+  ++truthSampleCount;
+}
+
 double PerformanceMetrics::meanAbsResidual() const {
   if (sampleCount <= 0) {
     return 0.0;
@@ -27,6 +52,20 @@ double PerformanceMetrics::rmse() const {
     return 0.0;
   }
   return std::sqrt(sumSqResidual / sampleCount);
+}
+
+double PerformanceMetrics::truthRmse() const {
+  if (truthSampleCount <= 0) {
+    return 0.0;
+  }
+  return std::sqrt(sumSqTruthPos / truthSampleCount);
+}
+
+double PerformanceMetrics::meanTruthNees() const {
+  if (truthSampleCount <= 0) {
+    return 0.0;
+  }
+  return sumTruthNees / truthSampleCount;
 }
 
 } // namespace mad

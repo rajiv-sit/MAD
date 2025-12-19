@@ -63,6 +63,7 @@ public:
 
   void predict(double dt) override;
   FilterOutput_t update(const FilterInput_t& input) override;
+  void initialize(const Vector& initialState);
 
   double effectiveSampleSize() const { return effectiveSampleSizeInternal(); }
   const std::vector<Particle_t>& particlesRef() const { return particles; }

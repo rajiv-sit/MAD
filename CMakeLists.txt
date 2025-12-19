@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.20)
 
 project(MAD VERSION 0.1.0 LANGUAGES CXX)
 
+if(MSVC)
+  add_compile_options(/FS)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -36,6 +40,7 @@ add_library(mad_core
   src/core/FilterFactory.cpp
   src/core/ParticleFilter.cpp
   src/core/MadModel.cpp
+  src/core/Logger.cpp
   src/core/PerformanceMetrics.cpp
 )
 target_include_directories(mad_core PUBLIC include)
@@ -88,6 +93,9 @@ if(MAD_BUILD_GUI)
   endif()
   target_include_directories(mad_gui PRIVATE "${IMGUI_INCLUDE_DIR}" "${IMGUI_BACKEND_DIR}")
   target_link_libraries(mad_gui PRIVATE mad_pipeline mad_tracking mad_viz glfw glad::glad opengl::opengl)
+  if(WIN32)
+    target_link_libraries(mad_gui PRIVATE winmm)
+  endif()
   target_add_warnings(mad_gui)
 endif()
 

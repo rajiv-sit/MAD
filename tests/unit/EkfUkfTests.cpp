@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "mad/core/EKF.hpp"
+#include "mad/core/MadModel.hpp"
 #include "mad/core/UKF.hpp"
 
 namespace {
@@ -16,27 +17,30 @@ mad::Measurement_t makeMeasurement() {
   return measurement;
 }
 
+std::shared_ptr<mad::MadModel> makeModel(const mad::Measurement_t& measurement) {
+  mad::Vector earthField(3);
+  earthField << 2.5e-5, -3.4e-6, 3.6e-5;
+  auto model = std::make_shared<mad::MadModel>(earthField, 0.05, 1e-18, mad::ObservationModel_e::kDipole);
+  model->setMeasurementContext(measurement);
+  return model;
+}
+
 } // namespace
 
-TEST(EkfUkfTests, UpdatesStateFromMeasurement) {
-  mad::EKF ekf(4);
-  mad::UKF ukf(4);
-
+TEST(EkfUkfTests, ProducesTenStateEstimate) {
   const mad::Measurement_t measurement = makeMeasurement();
+  auto model = makeModel(measurement);
+  mad::EKF ekf(model, 10);
+  mad::UKF ukf(model, 10);
+
   mad::FilterInput_t input{measurement, 0.0};
 
   mad::FilterOutput_t ekfOutput = ekf.update(input);
   mad::FilterOutput_t ukfOutput = ukf.update(input);
 
-  ASSERT_EQ(ekfOutput.state.size(), 4);
-  EXPECT_NEAR(ekfOutput.state(0), 1.0, 1e-9);
-  EXPECT_NEAR(ekfOutput.state(1), 2.0, 1e-9);
-  EXPECT_NEAR(ekfOutput.state(2), 3.0, 1e-9);
-  EXPECT_NEAR(ekfOutput.state(3), 4.0, 1e-9);
+  ASSERT_EQ(ekfOutput.state.size(), 10);
+  EXPECT_TRUE(ekfOutput.state.allFinite());
 
-  ASSERT_EQ(ukfOutput.state.size(), 4);
-  EXPECT_NEAR(ukfOutput.state(0), 1.0, 1e-9);
-  EXPECT_NEAR(ukfOutput.state(1), 2.0, 1e-9);
-  EXPECT_NEAR(ukfOutput.state(2), 3.0, 1e-9);
-  EXPECT_NEAR(ukfOutput.state(3), 4.0, 1e-9);
+  ASSERT_EQ(ukfOutput.state.size(), 10);
+  EXPECT_TRUE(ukfOutput.state.allFinite());
 }

@@ -3,6 +3,8 @@
 #include <cmath>
 #include <random>
 
+#include "mad/core/Logger.hpp"
+
 namespace mad {
 
 namespace {
@@ -41,11 +43,24 @@ Vector buildDipoleMoment(const Vector& state, const Vector& earthField) {
 MadModel::MadModel(const Vector& earthFieldInput,
                    double processNoiseVarInput,
                    double measurementNoiseVarInput,
-                   ObservationModel_e observationModelInput)
+                   ObservationModel_e observationModelInput,
+                   double measurementScaleInput)
     : earthField(earthFieldInput),
       processNoiseVar(processNoiseVarInput),
       measurementNoiseVar(measurementNoiseVarInput),
-      observationModel(observationModelInput) {}
+      observationModel(observationModelInput),
+      measurementScale(measurementScaleInput) {
+  if (auto logger = Logger::Get()) {
+    logger->info("MadModel: earthField [{:.3e}, {:.3e}, {:.3e}]",
+                 earthField.size() > 0 ? earthField(0) : 0.0,
+                 earthField.size() > 1 ? earthField(1) : 0.0,
+                 earthField.size() > 2 ? earthField(2) : 0.0);
+    logger->info("MadModel: processNoiseVar {:.3e} measurementNoiseVar {:.3e} measurementScale {:.3e}",
+                 processNoiseVar,
+                 measurementNoiseVar,
+                 measurementScale);
+  }
+}
 
 void MadModel::setMeasurementContext(const Measurement_t& measurement) {
   sensorPosEcef = measurement.sensorPosEcef;
@@ -71,19 +86,74 @@ Vector MadModel::propagate(const Vector& state, double dt, std::mt19937& rng) co
 
 Vector MadModel::predictMeasurement(const Vector& state) const {
   if (observationModel == ObservationModel_e::kBodyFrame) {
-    return predictBodyFrameMeasurement(state);
+    Vector measurement = predictBodyFrameMeasurement(state);
+    if (measurement.size() > 0) {
+      measurement(0) *= measurementScale;
+    }
+    return measurement;
   }
-  return predictDipoleMeasurement(state);
+  Vector measurement = predictDipoleMeasurement(state);
+  if (measurement.size() > 0) {
+    measurement(0) *= measurementScale;
+  }
+  return measurement;
 }
 
-Matrix MadModel::processNoise(double /*dt*/) const {
-  Matrix noise = Matrix::Identity(10, 10) * processNoiseVar;
-  return noise;
+Matrix MadModel::processNoise(double dt) const {
+  Matrix noise = Matrix::Zero(10, 10);
+  const double t = std::max(dt, 0.0);
+  const double t2 = t * t;
+  const double t3 = t2 * t;
+
+  noise(0, 0) = t3 / 3.0;
+  noise(0, 1) = t2 / 2.0;
+  noise(1, 0) = t2 / 2.0;
+  noise(1, 1) = t;
+  noise(2, 2) = t3 / 3.0;
+  noise(2, 3) = t2 / 2.0;
+  noise(3, 2) = t2 / 2.0;
+  noise(3, 3) = t;
+  for (int i = 4; i < 10; ++i) {
+    noise(i, i) = 1.0;
+  }
+
+  return noise * processNoiseVar;
 }
 
 Matrix MadModel::measurementNoise() const {
   Matrix noise = Matrix::Identity(1, 1) * measurementNoiseVar;
   return noise;
+}
+
+Matrix MadModel::processJacobian(double dt) const {
+  Matrix jacobian = Matrix::Identity(10, 10);
+  const double t = std::max(dt, 0.0);
+  jacobian(0, 1) = t;
+  jacobian(2, 3) = t;
+  return jacobian;
+}
+
+Matrix MadModel::measurementJacobian(const Vector& state) const {
+  const double eps = 1e-4;
+  const Vector base = predictMeasurement(state);
+  const int rows = static_cast<int>(base.size());
+  const int cols = static_cast<int>(state.size());
+  Matrix jacobian = Matrix::Zero(rows, cols);
+  for (int i = 0; i < cols; ++i) {
+    Vector pert = state;
+    pert(i) += eps;
+    Vector meas = predictMeasurement(pert);
+    jacobian.col(i) = (meas - base) / eps;
+  }
+  return jacobian;
+}
+
+void MadModel::setMeasurementScale(double scale) {
+  measurementScale = scale;
+}
+
+double MadModel::measurementScaleValue() const {
+  return measurementScale;
 }
 
 Vector MadModel::predictDipoleMeasurement(const Vector& state) const {

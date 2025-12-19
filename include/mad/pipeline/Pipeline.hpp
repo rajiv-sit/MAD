@@ -13,7 +13,8 @@ class Pipeline {
 public:
   Pipeline(std::shared_ptr<IDataSource> dataSource,
            std::shared_ptr<IFilter> filter,
-           std::shared_ptr<ITracker> tracker);
+           std::shared_ptr<ITracker> tracker,
+           std::size_t maxScans = 0);
 
   void run();
 
@@ -21,6 +22,7 @@ private:
   std::shared_ptr<IDataSource> dataSource;
   std::shared_ptr<IFilter> filter;
   std::shared_ptr<ITracker> tracker;
+  std::size_t maxScans = 0;
 };
 
 } // namespace mad

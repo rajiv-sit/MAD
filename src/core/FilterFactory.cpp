@@ -3,6 +3,8 @@
 #include <string>
 
 #include "mad/core/EKF.hpp"
+#include "mad/core/Logger.hpp"
+#include "mad/core/MadModel.hpp"
 #include "mad/core/UKF.hpp"
 
 namespace mad {
@@ -124,10 +126,42 @@ std::shared_ptr<IFilter> createFilter(const nlohmann::json& filterNode,
   const nlohmann::json params = filterNode.is_object() ? filterNode.value("params", nlohmann::json{}) : nlohmann::json{};
 
   if (type == "ekf") {
-    return std::make_shared<EKF>();
+    if (!model) {
+      if (auto logger = Logger::Get()) {
+        logger->error("FilterFactory: EKF requires a model.");
+      }
+      return nullptr;
+    }
+    auto madModel = std::dynamic_pointer_cast<MadModel>(model);
+    if (!madModel) {
+      if (auto logger = Logger::Get()) {
+        logger->error("FilterFactory: EKF requires MadModel.");
+      }
+      return nullptr;
+    }
+    if (auto logger = Logger::Get()) {
+      logger->info("FilterFactory: creating EKF.");
+    }
+    return std::make_shared<EKF>(madModel);
   }
   if (type == "ukf") {
-    return std::make_shared<UKF>();
+    if (!model) {
+      if (auto logger = Logger::Get()) {
+        logger->error("FilterFactory: UKF requires a model.");
+      }
+      return nullptr;
+    }
+    auto madModel = std::dynamic_pointer_cast<MadModel>(model);
+    if (!madModel) {
+      if (auto logger = Logger::Get()) {
+        logger->error("FilterFactory: UKF requires MadModel.");
+      }
+      return nullptr;
+    }
+    if (auto logger = Logger::Get()) {
+      logger->info("FilterFactory: creating UKF.");
+    }
+    return std::make_shared<UKF>(madModel);
   }
 
   ParticleFilterOptions_t options = parseParticleOptions(params);
@@ -135,34 +169,64 @@ std::shared_ptr<IFilter> createFilter(const nlohmann::json& filterNode,
     options.stateDimension = 10;
   }
   if (!model) {
+    if (auto logger = Logger::Get()) {
+      logger->error("FilterFactory: particle filters require a model.");
+    }
     return nullptr;
   }
 
   if (type == "sis") {
+    if (auto logger = Logger::Get()) {
+      logger->info("FilterFactory: creating SIS PF.");
+    }
     return std::make_shared<SISParticleFilter>(model, options);
   }
   if (type == "apf") {
+    if (auto logger = Logger::Get()) {
+      logger->info("FilterFactory: creating APF.");
+    }
     return std::make_shared<AuxiliaryParticleFilter>(model, options);
   }
   if (type == "rpf") {
+    if (auto logger = Logger::Get()) {
+      logger->info("FilterFactory: creating RPF.");
+    }
     return std::make_shared<RegularizedParticleFilter>(model, options);
   }
   if (type == "adaptive") {
+    if (auto logger = Logger::Get()) {
+      logger->info("FilterFactory: creating adaptive PF.");
+    }
     return std::make_shared<AdaptiveResamplingParticleFilter>(model, options);
   }
   if (type == "robust") {
+    if (auto logger = Logger::Get()) {
+      logger->info("FilterFactory: creating robust PF.");
+    }
     return std::make_shared<RobustParticleFilter>(model, options);
   }
   if (type == "gmf") {
+    if (auto logger = Logger::Get()) {
+      logger->info("FilterFactory: creating Gaussian mixture PF.");
+    }
     return std::make_shared<GaussianMixtureParticleFilter>(model, options);
   }
   if (type == "ekf-pf") {
+    if (auto logger = Logger::Get()) {
+      logger->info("FilterFactory: creating EKF-PF.");
+    }
     return std::make_shared<EkfParticleFilter>(model, options);
   }
   if (type == "ukf-pf") {
+    if (auto logger = Logger::Get()) {
+      logger->info("FilterFactory: creating UKF-PF.");
+    }
     return std::make_shared<UkfParticleFilter>(model, options);
   }
 
+  if (auto logger = Logger::Get()) {
+    logger->warn("FilterFactory: unknown type '{}', defaulting to SIR PF.", type);
+  }
   return std::make_shared<SIRParticleFilter>(model, options);
 }
 
